@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+*.egg-info/
+.pytest_cache/
+reports/
+knowledge/pages/*/
+knowledge/apps/*.md
+!knowledge/apps/_template.md
