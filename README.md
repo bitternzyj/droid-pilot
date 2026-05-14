@@ -40,6 +40,40 @@ python droid-pilot/scripts/scaffold.py init -p com.xxx --dir /path/to/your-proje
 - `uiautomator2`：`pip install uiautomator2`
 - `pytest`：`pip install pytest`（测试执行时需要）
 - Poco（可选，游戏类应用）：`pip install pocoui`
+- `requests`：`pip install requests`（视觉驱动调用 Ollama API）
+
+#### 视觉模型（Vision Driver）
+
+当 u2/poco 无法 dump 页面元素时（游戏自绘 UI、WebView 等），VisionDriver 会通过本地视觉模型进行元素定位和页面理解。
+
+**推荐模型：[gelab-zero-4b](https://ollama.com/library/gelab-zero-4b)**
+
+经过对比测试（qwen-gui、UI-TARS-1.5-7B、Gemma4、AutoGLM-Phone、gelab-zero-4b），gelab-zero-4b 在移动端 UI 场景综合表现最优：
+
+| 指标 | gelab-zero-4b | 其他同量级模型 |
+|------|--------------|--------------|
+| 参数量 | 4B | 7-9B |
+| 显存占用 | ~8GB | 14-20GB |
+| 单次推理 | ~1.5s | 3-8s |
+| 坐标精度 | 归一化 0-1000 原生支持 | 需后处理 |
+| 中文 UI | 准确 | 部分模型弱 |
+
+安装：
+
+```bash
+# 安装 Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# 拉取模型
+ollama pull gelab-zero-4b
+```
+
+配置（环境变量，可选）：
+
+```bash
+export DROID_PILOT_OLLAMA_URL=http://localhost:11434   # Ollama 服务地址
+export DROID_PILOT_VISION_MODEL=gelab-zero-4b          # 模型名称
+```
 
 ### 3. 连接设备
 
@@ -153,7 +187,7 @@ droid-pilot/
 │   │   ├── base.py       #   Element 数据类 + BaseDriver 抽象类
 │   │   ├── u2_driver.py  #   UIAutomator2 驱动
 │   │   ├── poco_driver.py#   Poco 驱动（Unity/Cocos）
-│   │   ├── vision_driver.py # 纯视觉驱动（截图+坐标）
+│   │   ├── vision_driver.py # 纯视觉驱动（Ollama + gelab-zero-4b）
 │   │   └── auto_driver.py#   自动路由（u2→poco→vision）
 │   ├── page_matcher.py   #   页面匹配引擎
 │   └── fingerprint.py    #   页面指纹 & Jaccard 相似度
@@ -184,3 +218,4 @@ droid-pilot/
 3. **Claude-as-Judge** —— 每步截图 + dump 上下文，Claude 判断 pass/fail，比硬编码 assert 更灵活
 4. **知识库在 skill 中，生成代码在项目中** —— 知识可复用，测试代码跟项目走
 5. **不引入外部模板引擎** —— 用 `string.Template` 保持零外部依赖
+6. **视觉定位走本地模型** —— 元素坐标定位由本地 4B 小模型完成（~1.5s/次），不消耗云端 token，大幅降低自动化成本
